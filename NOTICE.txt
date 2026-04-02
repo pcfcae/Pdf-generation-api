@@ -1,0 +1,12 @@
+This project includes iText 5, a PDF library.
+
+iText 5 is licensed under the GNU Affero General Public License v3.0 (AGPLv3).
+
+Use of iText 5 in this project subjects this application to the terms of the AGPLv3.
+
+Users interacting with this service over a network are entitled to receive
+the complete corresponding source code of the running version of this service,
+as required under the AGPLv3.
+
+The complete source code is available at:
+https://github.com/pcfcae/Pdf-generation-api
