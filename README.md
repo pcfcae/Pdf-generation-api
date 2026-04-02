@@ -64,7 +64,7 @@ The full source code for this service is publicly available at:
 
 * Windows OS
 * .NET Framework 4.7.2 Developer Pack
-* Visual Studio 2017 or later
+* Visual Studio 2017 or 2019
 * IIS (optional, for hosting)
 
 ---
@@ -81,9 +81,10 @@ cd Pdf-generation-api
 
 ### Open in Visual Studio
 
-1. Open Visual Studio
+1. Open Visual Studio 2017 or 2019
 2. Click **Open Project/Solution**
 3. Select the `.sln` file
+4. Right-click solution → **Restore NuGet Packages** to install required dependencies
 
 ---
 
@@ -130,6 +131,14 @@ Or use Visual Studio:
 
    * .NET CLR Version: **v4.0**
 4. Start the site
+
+---
+
+## Clients Folder
+
+The `Clients/` folder contains a reference implementation showing how to consume this API from a **Microsoft Dynamics CRM plugin**. It is not part of the main API project.
+
+> **Note:** If the `Clients` project is included in the solution, you must **unload or exclude** it before building. Right-click the project in Solution Explorer → **Unload Project**. Otherwise the build will fail due to missing CRM SDK dependencies.
 
 ---
 
