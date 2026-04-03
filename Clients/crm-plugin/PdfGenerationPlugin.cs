@@ -24,19 +24,41 @@ namespace PdfGenerationPlugin
 
             try
             {
-                if (!(context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity entity))
+                EntityReference targetRef = null;
+                Entity entity = null;
+
+                if (context.InputParameters.Contains("Target"))
+                {
+                    var target = context.InputParameters["Target"];
+                    if (target is EntityReference er)
+                        targetRef = er;
+                    else if (target is Entity ent)
+                    {
+                        entity = ent;
+                        targetRef = ent.ToEntityReference();
+                    }
+                }
+
+                if (targetRef == null)
                     return;
 
-                string reportType = entity.GetAttributeValue<string>("new_reporttype");
+                string reportType = null;
+
+                if (entity != null)
+                    reportType = entity.GetAttributeValue<string>("new_reporttype");
+
+                if (string.IsNullOrEmpty(reportType) && context.InputParameters.Contains("ReportType"))
+                    reportType = context.InputParameters["ReportType"] as string;
+
                 if (string.IsNullOrEmpty(reportType))
                 {
-                    tracingService.Trace("No report type specified on the Case.");
+                    tracingService.Trace("No report type found on Case field or action input parameter.");
                     return;
                 }
 
                 var caseRecord = service.Retrieve(
-                    entity.LogicalName,
-                    entity.Id,
+                    targetRef.LogicalName,
+                    targetRef.Id,
                     new ColumnSet(true));
 
                 var template = LoadTemplate(service, reportType, tracingService);

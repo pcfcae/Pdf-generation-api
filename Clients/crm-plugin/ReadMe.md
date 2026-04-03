@@ -7,10 +7,12 @@ A Dynamics 365 CRM v9.x plugin that generates PDF reports by sending HTML templa
 ## Integration Flow
 
 ```
-Case record updated
+Case update or backoffice action (e.g. Approve, Resubmit)
        |
        v
-Plugin reads new_reporttype from Case
+Plugin resolves report type:
+  1. Case field (new_reporttype) — checked first
+  2. Action input parameter (ReportType) — fallback
        |
        v
 Queries new_pdftemplate entity for matching template
@@ -35,13 +37,14 @@ Updates Case statuscode (Completed / Resubmit)
 
 ### Case (incident) -- built-in entity
 
-The standard Case entity is used as the request record. A custom field is added to identify which report template to use.
+The standard Case entity is used as the source record for PDF generation. The plugin retrieves all Case fields at runtime to bind them into the HTML template placeholders.
 
-| Field | Type | Description |
-|---|---|---|
-| `new_reporttype` | Single Line of Text | Report type key that maps to a template record (e.g. `permit_noc`, `approval_notification`, `technical_report`) |
+The report type can be provided in two ways (the plugin checks in this order):
 
-The plugin also reads all other Case fields at runtime to bind them into the HTML template placeholders.
+1. **Case field** — `new_reporttype` (Single Line of Text) on the Case entity. Useful when the report type is predetermined by the case itself.
+2. **Action input parameter** — `ReportType` (String) passed via a CRM Custom Action. Useful when the backoffice user chooses an action (e.g. Approve, Resubmit) that determines which report to generate.
+
+If `new_reporttype` is set on the Case, it takes priority. Otherwise the plugin falls back to the `ReportType` input parameter.
 
 #### Custom Status Reason Values
 
@@ -60,7 +63,7 @@ A custom entity that stores HTML templates for each report type. Create one reco
 
 | Field | Logical Name | Type | Description |
 |---|---|---|---|
-| Template Key | `new_templatekey` | Single Line of Text | Unique key matching the Case `new_reporttype` value (e.g. `permit_noc`) |
+| Template Key | `new_templatekey` | Single Line of Text | Unique key matching the resolved report type — either from the Case `new_reporttype` field or the `ReportType` action input parameter (e.g. `permit_noc`) |
 | Body HTML | `new_bodyhtmlcontent` | Multiple Lines of Text | The main report body HTML. Supports `{{fieldname}}` placeholders |
 | Header HTML | `new_headerhtmlcontent` | Multiple Lines of Text | HTML rendered as a repeating header on every PDF page |
 | Footer HTML | `new_footerhtmlcontent` | Multiple Lines of Text | HTML rendered as a repeating footer on every PDF page |
