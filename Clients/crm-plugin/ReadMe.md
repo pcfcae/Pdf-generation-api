@@ -127,6 +127,65 @@ private const int StatusResubmit = 100000002;
 2. Restore NuGet packages.
 3. Build in **Release** mode. The output assembly is `PdfGenerationPlugin.dll`.
 
+## Calling the Plugin via Custom Action (JavaScript)
+
+> **Note:** The example below uses the Case (`incident`) entity and action name `new_GeneratePdf` as a reference. Your entity names, action name, and report type values will differ depending on your CRM environment. Adjust the `@odata.type`, entity ID field, action URL, and report type strings to match your setup.
+
+```javascript
+// Replace "incident" and "incidentid" with your entity logical name and primary key.
+// Replace "new_GeneratePdf" with your Custom Action unique name.
+function executeGeneratePdf(reportType) {
+    var recordId = Xrm.Page.data.entity.getId().replace("{", "").replace("}", "");
+    var targetRef = {
+        "@odata.type": "Microsoft.Dynamics.CRM.incident",
+        incidentid: recordId
+    };
+
+    var parameters = {
+        Target: targetRef,
+        ReportType: reportType
+    };
+
+    var request = new XMLHttpRequest();
+    request.open("POST", Xrm.Utility.getGlobalContext().getClientUrl()
+        + "/api/data/v9.1/new_GeneratePdf", true);
+    request.setRequestHeader("Content-Type", "application/json");
+    request.setRequestHeader("OData-MaxVersion", "4.0");
+    request.setRequestHeader("OData-Version", "4.0");
+    request.onreadystatechange = function () {
+        if (request.readyState === 4) {
+            if (request.status === 200 || request.status === 204) {
+                Xrm.Utility.alertDialog("PDF generated successfully.");
+            } else {
+                Xrm.Utility.alertDialog("PDF generation failed: " + request.statusText);
+            }
+        }
+    };
+    request.send(JSON.stringify(parameters));
+}
+
+// Example: Approve button — replace "permit_noc" with your template key
+executeGeneratePdf("permit_noc");
+
+// Example: Resubmit button — replace "technical_report" with your template key
+executeGeneratePdf("technical_report");
+```
+
+### CRM Custom Action Setup
+
+Create a Custom Action in CRM (Settings > Processes > New). The values below are examples — use names that match your environment.
+
+| Setting | Value (example) |
+|---|---|
+| Process Name | `new_GeneratePdf` |
+| Category | Action |
+| Entity | Your target entity (e.g. Case / incident) |
+| Input Parameter | `ReportType` (Type: String) |
+
+Register the plugin step on this action's message (e.g. `new_GeneratePdf`) instead of (or in addition to) the Update message.
+
+---
+
 ## Plugin Registration (Plugin Registration Tool)
 
 ### Step 1 -- Register the Assembly
@@ -141,9 +200,19 @@ private const int StatusResubmit = 100000002;
 
 ### Step 2 -- Register a Step
 
-1. Select the registered assembly and expand it to find `PdfGenerationPlugin.GeneratePdfPlugin`.
-2. Right-click > **Register New Step**.
-3. Configure the step:
+Register one or both steps depending on which trigger method you use.
+
+**Option A — Custom Action (recommended for action buttons)**
+
+| Setting | Value |
+|---|---|
+| Message | `new_GeneratePdf` |
+| Primary Entity | `incident` |
+| Event Pipeline Stage | **Post-Operation** |
+| Execution Mode | **Asynchronous** (recommended) |
+| Deployment | Server |
+
+**Option B — Case Update (for field-driven generation)**
 
 | Setting | Value |
 |---|---|
@@ -154,19 +223,18 @@ private const int StatusResubmit = 100000002;
 | Execution Mode | **Asynchronous** (recommended) |
 | Deployment | Server |
 
-4. Click **Register New Step**.
+Click **Register New Step** after configuring.
 
 ### Step 3 -- Verify
 
-1. Open a Case record in CRM.
-2. Set the `new_reporttype` field to a value that matches a `new_pdftemplate` record (e.g. `permit_noc`).
-3. Save the record.
-4. Check the Notes section on the Case -- a PDF attachment should appear.
-5. Verify the Case status reason has been updated.
+**For Custom Action:** Click the Approve or Resubmit button on a Case form. Check the Notes section — a PDF attachment should appear.
+
+**For Case Update:** Set the `new_reporttype` field to a value that matches a `new_pdftemplate` record (e.g. `permit_noc`) and save. Check the Notes section — a PDF attachment should appear.
 
 ## Troubleshooting
 
-- **"No report template configured for type '...'"** -- No `new_pdftemplate` record exists with a `new_templatekey` matching the Case `new_reporttype` value. Create the template record.
+- **"No report type found on Case field or action input parameter"** -- Neither `new_reporttype` on the Case nor the `ReportType` action input parameter was provided. Ensure one of them is set.
+- **"No report template configured for type '...'"** -- No `new_pdftemplate` record exists with a `new_templatekey` matching the resolved report type. Create the template record.
 - **"PDF API returned empty content"** -- The API responded but the `base64` field was empty. Check the API server logs.
 - **"PDF generation failed"** -- Check the CRM plugin trace log (Settings > Plugin Trace Log) for the full exception details.
 - **Network / timeout errors** -- Ensure the CRM server (or sandbox) can reach the `ApiBaseUrl` over HTTPS. The default timeout is 120 seconds.
